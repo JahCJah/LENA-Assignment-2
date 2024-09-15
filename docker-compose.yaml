@@ -1,0 +1,66 @@
+# version: '2.27.1-desktop.1'
+
+# services:
+#   test:
+#     image: hello-world
+
+version: '2.27.1-desktop.1'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow-webserver:
+    image: apache/airflow:2.1.0
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__RBAC=True
+      - KAGGLE_USERNAME=${KAGGLE_USERNAME}
+      - KAGGLE_KEY=${KAGGLE_KEY}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+      pip install kaggle &&
+      airflow db init &&
+      airflow webserver &&
+      apache-airflow apache-airflow-providers-amazon
+      "
+
+  airflow-scheduler:
+    image: apache/airflow:2.1.0
+    restart: always
+    depends_on:
+      - airflow-webserver
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+    command: >
+      bash -c "
+      pip install kaggle &&
+      airflow db init &&      airflow scheduler &&
+      apache-airflow apache-airflow-providers-amazon
+      "
+volumes:
+  postgres_data:

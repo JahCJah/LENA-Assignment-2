@@ -1,0 +1,4 @@
+.env
+lena-assignment-2/
+airflow/logs/
+airflow/plugins
